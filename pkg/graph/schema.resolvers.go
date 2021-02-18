@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -17,6 +18,44 @@ import (
 
 func (r *accessibilityRequestResolver) Documents(ctx context.Context, obj *models.AccessibilityRequest) ([]*model.AccessibilityRequestDocument, error) {
 	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *accessibilityRequestResolver) RelevantTestDate(ctx context.Context, obj *models.AccessibilityRequest) (*model.TestDate, error) {
+	allDates := []*model.TestDate{}
+
+	if time.Now().Unix()%3 == 0 {
+		allDates = append(allDates, &model.TestDate{
+			ID:       uuid.New(),
+			Date:     time.Now().AddDate(0, 0, 1),
+			TestType: model.TestDateTestTypeInitial,
+		})
+	}
+	var nearFuture *model.TestDate
+	var recentPast *model.TestDate
+
+	now := time.Now()
+
+	for _, td := range allDates {
+		if td.Date.After(now) {
+			if nearFuture == nil || td.Date.Before(nearFuture.Date) {
+				nearFuture = td
+				continue
+			}
+		}
+		if td.Date.Before(now) {
+			if recentPast == nil || td.Date.After((recentPast.Date)) {
+				recentPast = td
+				continue
+			}
+		}
+	}
+
+	// future date takes precedence
+	if nearFuture != nil {
+		return nearFuture, nil
+	}
+	// either recentPast is defined or it is nil
+	return recentPast, nil
 }
 
 func (r *accessibilityRequestResolver) System(ctx context.Context, obj *models.AccessibilityRequest) (*models.System, error) {
